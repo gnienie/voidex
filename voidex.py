@@ -28,7 +28,7 @@ APP_VERSION = "2.2"
 MINECRAFT_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
 MODRINTH_API = "https://api.modrinth.com/v2"
 USER_AGENT = f"Voidex/{APP_VERSION} (https://github.com/gnienie/voidex)"
-MIN_MINECRAFT = (1, 16, 5)
+MIN_MINECRAFT = (1, 8, 9)
 
 MODS = [
     {"slug": "fabric-api", "name": "Fabric API", "description": "Common library required by many Fabric mods.", "default": True},
@@ -90,6 +90,41 @@ MODS = [
     {"slug": "language-reload", "name": "Language Reload", "description": "Improves language switching and reloads.", "default": False},
     {"slug": "enhanced-block-entities", "name": "Enhanced Block Entities", "description": "Improves rendering for selected block entities.", "default": False},
 ]
+
+
+# Additional projects: availability is checked against the exact Minecraft version
+# and Fabric loader before installation.
+MODS.extend([
+    {"slug":"starlight","name":"Starlight","description":"Lighting engine optimization for supported older versions.","default":False},
+    {"slug":"phosphor","name":"Phosphor","description":"Lighting optimization for compatible older versions.","default":False},
+    {"slug":"hydrogen","name":"Hydrogen","description":"Memory optimization for supported older versions.","default":False},
+    {"slug":"fps-reducer","name":"FPS Reducer","description":"Reduces FPS while Minecraft is idle or in the background.","default":False},
+    {"slug":"architectury-api","name":"Architectury API","description":"Shared API library used by some mods.","default":False},
+    {"slug":"architectury","name":"Architectury","description":"Cross-loader API library for compatible mods.","default":False},
+    {"slug":"cloth-config","name":"Cloth Config API","description":"Configuration library required by some mods.","default":False},
+    {"slug":"fabric-language-kotlin","name":"Fabric Language Kotlin","description":"Kotlin runtime required by some Fabric mods.","default":False},
+    {"slug":"collective","name":"Collective","description":"Shared library used by utility mods.","default":False},
+    {"slug":"owo-lib","name":"owo-lib","description":"Library required by some Fabric mods.","default":False},
+    {"slug":"forge-config-api-port","name":"Forge Config API Port","description":"Configuration API port for supported mods.","default":False},
+    {"slug":"resourceful-lib","name":"Resourceful Lib","description":"Shared library for compatible mods.","default":False},
+    {"slug":"puzzles-lib","name":"Puzzles Lib","description":"Shared library for selected mods.","default":False},
+    {"slug":"moonlight","name":"Moonlight Lib","description":"Shared library for compatible mods.","default":False},
+    {"slug":"balm","name":"Balm","description":"Shared library required by selected mods.","default":False},
+    {"slug":"bookshelf","name":"Bookshelf","description":"Shared library for compatible mods.","default":False},
+    {"slug":"cardinal-components-api","name":"Cardinal Components API","description":"Component API used by some Fabric mods.","default":False},
+    {"slug":"emi","name":"EMI","description":"Recipe and item viewer utility; not a direct FPS mod.","default":False},
+    {"slug":"jei","name":"Just Enough Items","description":"Recipe viewer utility when a matching Fabric file exists.","default":False},
+    {"slug":"appleskin","name":"AppleSkin","description":"Food and saturation HUD utility.","default":False},
+    {"slug":"inventory-profiles-next","name":"Inventory Profiles Next","description":"Inventory management utility with extra dependencies.","default":False},
+    {"slug":"presence-footsteps","name":"Presence Footsteps","description":"Optional sound immersion mod, not a performance mod.","default":False},
+    {"slug":"sound-physics-remastered","name":"Sound Physics Remastered","description":"Optional advanced sound behavior.","default":False},
+    {"slug":"entity-view-distance","name":"Entity View Distance","description":"Adjusts entity rendering distance on supported versions.","default":False},
+    {"slug":"fast-particles","name":"Fast Particles","description":"Particle performance utility on supported versions.","default":False},
+    {"slug":"distanthorizons","name":"Distant Horizons","description":"Adds distant terrain LOD; not a pure FPS mod.","default":False},
+    {"slug":"clientcrafting","name":"Client Crafting","description":"Client-side crafting utility where supported.","default":False},
+])
+_seen_slugs = set()
+MODS = [m for m in MODS if not (m["slug"] in _seen_slugs or _seen_slugs.add(m["slug"]))]
 
 C = {
     "bg": "#111018", "panel": "#191722", "alt": "#211e2c", "border": "#302b40",
@@ -481,7 +516,7 @@ class VoidexApp(ctk.CTk):
         try:
             manifest = read_json(MINECRAFT_MANIFEST, timeout=25)
             releases = [x["id"] for x in manifest.get("versions", [])
-                        if x.get("type") == "release" and supported_release(x.get("id", ""))]
+                        if x.get("type") in {"release", "snapshot"} and supported_release(x.get("id", ""))]
             if not releases:
                 raise RuntimeError("No compatible releases were returned by Mojang.")
             self.events.put(("versions", releases))
@@ -716,7 +751,7 @@ class VoidexApp(ctk.CTk):
                     self.version_menu.set(selected)
                     self.side_version.configure(text=f"Minecraft {selected}")
                     self.side_status.configure(text=f"{len(versions)} official releases available")
-                    self.status_label.configure(text=f"Loaded {len(versions)} official releases, from 1.16.5 to latest.")
+                    self.status_label.configure(text=f"Loaded {len(versions)} official releases and snapshots, from 1.8.9 to latest.")
                     self._save_settings()
                     self.check_compatibility()
                 elif kind == "versions_error":
