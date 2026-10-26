@@ -651,6 +651,27 @@ class VoidexApp(ctk.CTk):
         if not chosen:
             messagebox.showwarning("Voidex", "None of the selected mods has a compatible file for this version.")
             return
+        # Check Modrinth-declared incompatibilities among selected projects.
+        chosen_ids = {}
+        for mod in chosen:
+            info = self.cache.get((mod["slug"], version))
+            if info and info.get("project_id"):
+                chosen_ids[info["project_id"]] = mod["name"]
+        conflicts = []
+        for mod in chosen:
+            info = self.cache.get((mod["slug"], version)) or {}
+            for dependency in info.get("dependencies") or []:
+                if dependency.get("dependency_type") == "incompatible":
+                    other_id = dependency.get("project_id")
+                    if other_id in chosen_ids and chosen_ids[other_id] != mod["name"]:
+                        conflicts.append(" ↔ ".join(sorted((mod["name"], chosen_ids[other_id]))))
+        conflicts = sorted(set(conflicts))
+        if conflicts:
+            details = "\\n".join("- " + item for item in conflicts)
+            message = ("Modrinth marks these selected mods as incompatible:\\n\\n" + details
+                       + "\\n\\nInstall anyway? Some conflicts may not be detected if project metadata is incomplete.")
+            if not messagebox.askyesno("Potential mod conflicts", message):
+                return
         folder = self._current_folder()
         if not self._confirm_folder(folder):
             return
