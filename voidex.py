@@ -52,7 +52,43 @@ MODS = [
     {"slug": "sodium-extra", "name": "Sodium Extra", "description": "Adds extra settings for Sodium.", "default": False},
     {"slug": "reeses-sodium-options", "name": "Reese's Sodium Options", "description": "Improves the Sodium settings screen.", "default": False},
     {"slug": "yet-another-config-lib", "name": "YetAnotherConfigLib", "description": "Configuration library used by some optional mods.", "default": False},
-    {"slug": "modmenu", "name": "Mod Menu", "description": "Shows installed mods in-game.", "default": False},
+    {"slug": "modmenu", "name": "Mod Menu", "description": "Shows installed mods in-game.", "default": False},    {"slug": "c2me-fabric", "name": "C2ME", "description": "Optimizes chunk generation and loading with parallel processing.", "default": False},
+    {"slug": "nvidium", "name": "Nvidium", "description": "NVIDIA-specific rendering optimization for supported GPUs and versions.", "default": False},
+    {"slug": "iris", "name": "Iris Shaders", "description": "Shader support built around Sodium; optional graphics feature.", "default": False},
+    {"slug": "continuity", "name": "Continuity", "description": "Connected textures support; visual add-on, not a pure FPS mod.", "default": False},
+    {"slug": "entity-model-features", "name": "Entity Model Features", "description": "Custom entity model support for resource packs.", "default": False},
+    {"slug": "entitytexturefeatures", "name": "Entity Texture Features", "description": "Custom entity textures and emissive texture support.", "default": False},
+    {"slug": "indium", "name": "Indium", "description": "Rendering API compatibility for certain Sodium-era versions.", "default": False},
+    {"slug": "alternate-current", "name": "Alternate Current", "description": "Optimizes redstone dust calculations.", "default": False},
+    {"slug": "lazydfu", "name": "LazyDFU", "description": "Reduces unnecessary DataFixerUpper startup work on supported versions.", "default": False},
+    {"slug": "threadtweak", "name": "ThreadTweak", "description": "Adjusts client thread scheduling to help reduce stutters.", "default": False},
+    {"slug": "saturn", "name": "Saturn", "description": "Memory optimization mod for supported Minecraft versions.", "default": False},
+    {"slug": "fastload", "name": "Fastload", "description": "Targets slow world loading on compatible versions.", "default": False},
+    {"slug": "scalablelux", "name": "ScalableLux", "description": "Optimizes lighting engine work on supported versions.", "default": False},
+    {"slug": "cull-less-leaves", "name": "Cull Less Leaves", "description": "Reduces unnecessary leaf rendering.", "default": False},
+    {"slug": "particle-core", "name": "Particle Core", "description": "Improves particle rendering and provides particle settings.", "default": False},
+    {"slug": "lambdynamiclights", "name": "LambDynamicLights", "description": "Dynamic lights for held items and entities; optional visual feature.", "default": False},
+    {"slug": "zoomify", "name": "Zoomify", "description": "Configurable zoom feature; optional utility.", "default": False},
+    {"slug": "optigui", "name": "OptiGUI", "description": "Custom GUI support for resource packs.", "default": False},
+    {"slug": "betterf3", "name": "BetterF3", "description": "Customizable debug screen that is easier to read.", "default": False},
+    {"slug": "better-biome-blend", "name": "Better Biome Blend", "description": "Optimizes biome color blending on supported versions.", "default": False},
+    {"slug": "bobby", "name": "Bobby", "description": "Caches distant chunks to extend render distance; uses extra storage and memory.", "default": False},
+    {"slug": "fast-ip-ping", "name": "Fast IP Ping", "description": "Speeds up server list pinging on supported versions.", "default": False},
+    {"slug": "fastanim", "name": "FastAnim", "description": "Optimizes selected animation processing.", "default": False},
+    {"slug": "noisium", "name": "Noisium", "description": "Optimizes world-generation noise calculations.", "default": False},
+    {"slug": "memoryleakfix", "name": "Memory Leak Fix", "description": "Fixes memory leaks on compatible game versions.", "default": False},
+    {"slug": "noxesium", "name": "Noxesium", "description": "Client-side improvements and optimizations for supported versions.", "default": False},
+    {"slug": "very-many-players", "name": "Very Many Players", "description": "Networking optimization primarily for servers; install only if relevant.", "default": False},
+    {"slug": "smoothboot-fabric", "name": "Smooth Boot (Fabric)", "description": "Adjusts startup thread usage on older compatible versions.", "default": False},
+    {"slug": "dashloader", "name": "DashLoader", "description": "Caches assets to speed up loading on compatible older versions.", "default": False},
+    {"slug": "fast-chest", "name": "FastChest", "description": "Optimizes rendering for chest block entities on supported versions.", "default": False},
+    {"slug": "entityculling", "name": "Entity Culling", "description": "Skips rendering hidden entities and block entities.", "default": True},
+    {"slug": "cullleaves", "name": "Cull Leaves", "description": "Reduces leaf rendering work on compatible versions.", "default": False},
+    {"slug": "sodium-shadowy-path-blocks", "name": "Sodium Shadowy Path Blocks", "description": "Improves performance of shadowy path block rendering.", "default": False},
+    {"slug": "moreculling", "name": "More Culling", "description": "Additional culling options for compatible rendering setups.", "default": False},
+    {"slug": "fastquit", "name": "FastQuit", "description": "Makes leaving a world less disruptive.", "default": False},
+    {"slug": "language-reload", "name": "Language Reload", "description": "Improves language switching and reloads.", "default": False},
+    {"slug": "enhanced-block-entities", "name": "Enhanced Block Entities", "description": "Improves rendering for selected block entities.", "default": False},
 ]
 
 C = {
@@ -85,15 +121,19 @@ def mod_category(slug: str) -> str:
     """Group mods into easy-to-scan categories in the UI."""
     if slug in {
         "sodium", "immediatelyfast", "entityculling", "moreculling",
-        "enhanced-block-entities", "exordium",
+        "enhanced-block-entities", "exordium", "nvidium", "iris", "continuity",
+        "entity-model-features", "entitytexturefeatures", "indium", "cull-less-leaves",
+        "particle-core", "lambdynamiclights", "sodium-shadowy-path-blocks", "cullleaves",
     }:
         return "Graphics"
     if slug in {
         "lithium", "ferrite-core", "modernfix", "dynamic-fps", "noisium",
-        "memoryleakfix", "badoptimizations",
+        "memoryleakfix", "badoptimizations", "c2me-fabric", "lazydfu", "saturn",
+        "fastload", "scalablelux", "better-biome-blend", "smoothboot-fabric", "dashloader",
+        "fast-chest", "fastanim",
     }:
         return "Memory & loading"
-    if slug in {"krypton", "fastquit", "debugify"}:
+    if slug in {"krypton", "fastquit", "debugify", "alternate-current", "fast-ip-ping", "very-many-players", "noxesium"}:
         return "Gameplay & networking"
     return "Libraries & utilities"
 
