@@ -24,7 +24,7 @@ except ImportError:
     minecraft_launcher_lib = None
 
 APP_NAME = "Voidex"
-APP_VERSION = "2.2"
+APP_VERSION = "2.3"
 MINECRAFT_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
 MODRINTH_API = "https://api.modrinth.com/v2"
 USER_AGENT = f"Voidex/{APP_VERSION} (https://github.com/gnienie/voidex)"
