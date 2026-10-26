@@ -24,7 +24,7 @@ except ImportError:
     minecraft_launcher_lib = None
 
 APP_NAME = "Voidex"
-APP_VERSION = "2.1"
+APP_VERSION = "2.2"
 MINECRAFT_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
 MODRINTH_API = "https://api.modrinth.com/v2"
 USER_AGENT = f"Voidex/{APP_VERSION} (https://github.com/gnienie/voidex)"
@@ -81,6 +81,23 @@ def default_game_dir() -> Path:
     return appdata / ".minecraft"
 
 
+def mod_category(slug: str) -> str:
+    """Group mods into easy-to-scan categories in the UI."""
+    if slug in {
+        "sodium", "immediatelyfast", "entityculling", "moreculling",
+        "enhanced-block-entities", "exordium",
+    }:
+        return "Graphics"
+    if slug in {
+        "lithium", "ferrite-core", "modernfix", "dynamic-fps", "noisium",
+        "memoryleakfix", "badoptimizations",
+    }:
+        return "Memory & loading"
+    if slug in {"krypton", "fastquit", "debugify"}:
+        return "Gameplay & networking"
+    return "Libraries & utilities"
+
+
 def version_numbers(version: str) -> tuple[int, ...]:
     return tuple(int(n) for n in re.findall(r"\d+", version)) or (0,)
 
@@ -131,6 +148,7 @@ class VoidexApp(ctk.CTk):
         self.compat: dict[str, bool | None] = {m["slug"]: None for m in MODS}
         self.checkboxes: dict[str, ctk.CTkCheckBox] = {}
         self.status_labels: dict[str, ctk.CTkLabel] = {}
+        self.mod_cards: dict[str, ctk.CTkFrame] = {}
         self.generation = 0
         self.busy = False
         self.game_dir = default_game_dir()
@@ -223,7 +241,7 @@ class VoidexApp(ctk.CTk):
         content = ctk.CTkFrame(self, fg_color="transparent", corner_radius=0)
         content.grid(row=0, column=1, sticky="nsew", padx=24, pady=(23, 18))
         content.grid_columnconfigure(0, weight=1)
-        content.grid_rowconfigure(3, weight=1)
+        content.grid_rowconfigure(4, weight=1)
 
         header = ctk.CTkFrame(content, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", pady=(0, 18))
@@ -266,17 +284,48 @@ class VoidexApp(ctk.CTk):
             font=ctk.CTkFont(size=11), text_color=C["muted"])
         self.mods_count.grid(row=0, column=1, sticky="e")
 
-        self.mods_scroll = ctk.CTkScrollableFrame(content, fg_color=C["panel"], corner_radius=14,
-            border_width=1, border_color=C["border"], scrollbar_button_color=C["border"],
-            scrollbar_button_hover_color=C["muted"])
-        self.mods_scroll.grid(row=3, column=0, sticky="nsew", pady=(0, 14))
+        toolbar = ctk.CTkFrame(content, fg_color="transparent")
+        toolbar.grid(row=3, column=0, sticky="ew", pady=(0, 9))
+        toolbar.grid_columnconfigure(0, weight=1)
+        self.search_entry = ctk.CTkEntry(
+            toolbar, height=36, corner_radius=9, border_color=C["border"], fg_color=C["panel"],
+            text_color=C["text"], placeholder_text="Search mods by name or description…",
+        )
+        self.search_entry.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self.search_entry.bind("<KeyRelease>", self._filter_mods)
+        self.category_menu = ctk.CTkComboBox(
+            toolbar, values=["All categories", "Graphics", "Memory & loading",
+                            "Gameplay & networking", "Libraries & utilities"],
+            state="readonly", width=165, height=36, corner_radius=9,
+            fg_color=C["panel"], border_color=C["border"], button_color=C["purple"],
+            button_hover_color=C["hover"], command=self._filter_mods,
+        )
+        self.category_menu.set("All categories")
+        self.category_menu.grid(row=0, column=1, padx=(0, 8))
+        ctk.CTkButton(
+            toolbar, text="Recommended", width=112, height=36, corner_radius=9,
+            fg_color=C["alt"], hover_color=C["border"], text_color=C["text"],
+            command=self._select_recommended,
+        ).grid(row=0, column=2, padx=(0, 8))
+        ctk.CTkButton(
+            toolbar, text="Clear", width=66, height=36, corner_radius=9,
+            fg_color="transparent", border_width=1, border_color=C["border"],
+            hover_color=C["alt"], text_color=C["muted"], command=self._clear_selection,
+        ).grid(row=0, column=3)
+
+        self.mods_scroll = ctk.CTkScrollableFrame(
+            content, fg_color=C["panel"], corner_radius=14, border_width=1,
+            border_color=C["border"], scrollbar_button_color=C["border"],
+            scrollbar_button_hover_color=C["muted"],
+        )
+        self.mods_scroll.grid(row=4, column=0, sticky="nsew", pady=(0, 14))
         self.mods_scroll.grid_columnconfigure(0, weight=1)
-        self.mods_scroll.grid_columnconfigure(1, weight=1)
         for idx, mod in enumerate(MODS):
             self._add_mod_card(mod, idx)
+        self._filter_mods()
 
         bottom = ctk.CTkFrame(content, fg_color=C["panel"], corner_radius=13, border_width=1, border_color=C["border"])
-        bottom.grid(row=4, column=0, sticky="ew")
+        bottom.grid(row=5, column=0, sticky="ew")
         bottom.grid_columnconfigure(0, weight=1)
         self.status_label = ctk.CTkLabel(bottom, text="Ready when you are.", font=ctk.CTkFont(size=11),
             text_color=C["muted"], anchor="w")
@@ -286,26 +335,85 @@ class VoidexApp(ctk.CTk):
         self.progress.set(0)
 
     def _add_mod_card(self, mod: dict, index: int):
-        row, col = divmod(index, 2)
-        card = ctk.CTkFrame(self.mods_scroll, fg_color=C["alt"], corner_radius=11,
-            border_width=1, border_color=C["border"])
-        card.grid(row=row, column=col, sticky="nsew", padx=7, pady=6)
+        # A single-column list gives every mod the same reading order and avoids
+        # the awkward left-right zig-zag when scrolling the old two-column grid.
+        card = ctk.CTkFrame(
+            self.mods_scroll, fg_color=C["alt"], corner_radius=11,
+            border_width=1, border_color=C["border"],
+        )
+        card.grid(row=index, column=0, sticky="ew", padx=7, pady=5)
         card.grid_columnconfigure(0, weight=1)
+        self.mod_cards[mod["slug"]] = card
+
         selected = mod["slug"] in self.saved_mods
-        check = ctk.CTkCheckBox(card, text=mod["name"], height=27, checkbox_width=18, checkbox_height=18,
+        check = ctk.CTkCheckBox(
+            card, text=mod["name"], height=27, checkbox_width=18, checkbox_height=18,
             corner_radius=5, border_color=C["muted"], fg_color=C["purple"], hover_color=C["hover"],
-            text_color=C["text"], font=ctk.CTkFont(size=12, weight="bold"))
-        check.grid(row=0, column=0, sticky="w", padx=(12, 5), pady=(10, 2))
+            text_color=C["text"], font=ctk.CTkFont(size=12, weight="bold"),
+            command=self._save_settings,
+        )
+        check.grid(row=0, column=0, sticky="w", padx=(12, 8), pady=(9, 2))
         if selected:
             check.select()
         self.checkboxes[mod["slug"]] = check
-        label = ctk.CTkLabel(card, text="Not checked", font=ctk.CTkFont(size=10),
-            text_color=C["muted"], anchor="e")
-        label.grid(row=0, column=1, sticky="e", padx=(0, 10), pady=(10, 2))
+
+        category = ctk.CTkLabel(
+            card, text=mod_category(mod["slug"]), font=ctk.CTkFont(size=9, weight="bold"),
+            text_color=C["purple"], anchor="e",
+        )
+        category.grid(row=0, column=1, sticky="e", padx=(6, 12), pady=(9, 2))
+
+        label = ctk.CTkLabel(
+            card, text="Not checked", font=ctk.CTkFont(size=10),
+            text_color=C["muted"], anchor="e",
+        )
+        label.grid(row=0, column=2, sticky="e", padx=(0, 12), pady=(9, 2))
         self.status_labels[mod["slug"]] = label
-        ctk.CTkLabel(card, text=mod["description"], font=ctk.CTkFont(size=10), text_color=C["muted"],
-            anchor="w", justify="left", wraplength=230).grid(
-            row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
+
+        ctk.CTkLabel(
+            card, text=mod["description"], font=ctk.CTkFont(size=10),
+            text_color=C["muted"], anchor="w", justify="left", wraplength=650,
+        ).grid(row=1, column=0, columnspan=3, sticky="ew", padx=12, pady=(0, 10))
+
+    def _filter_mods(self, *_args):
+        if not hasattr(self, "mod_cards"):
+            return
+        query = self.search_entry.get().strip().casefold() if hasattr(self, "search_entry") else ""
+        category = self.category_menu.get() if hasattr(self, "category_menu") else "All categories"
+        visible = 0
+
+        for mod in MODS:
+            slug = mod["slug"]
+            searchable = f'{mod["name"]} {mod["description"]} {slug} {mod_category(slug)}'.casefold()
+            matches_query = not query or query in searchable
+            matches_category = category == "All categories" or mod_category(slug) == category
+            card = self.mod_cards.get(slug)
+            if card is None:
+                continue
+            if matches_query and matches_category:
+                card.grid()
+                visible += 1
+            else:
+                card.grid_remove()
+
+        if hasattr(self, "mods_count"):
+            compatible = sum(1 for value in self.compat.values() if value is True)
+            if query or category != "All categories":
+                self.mods_count.configure(text=f"{visible} shown · {compatible} compatible")
+            else:
+                self.mods_count.configure(text=f"{compatible} of {len(MODS)} compatible")
+
+    def _select_recommended(self):
+        for mod in MODS:
+            box = self.checkboxes.get(mod["slug"])
+            if box is not None:
+                box.select() if mod["default"] else box.deselect()
+        self._save_settings()
+
+    def _clear_selection(self):
+        for box in self.checkboxes.values():
+            box.deselect()
+        self._save_settings()
 
     def _load_assets(self):
         try:
