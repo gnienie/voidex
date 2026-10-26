@@ -28,7 +28,7 @@ APP_VERSION = "2.2"
 MINECRAFT_MANIFEST = "https://launchermeta.mojang.com/mc/game/version_manifest_v2.json"
 MODRINTH_API = "https://api.modrinth.com/v2"
 USER_AGENT = f"Voidex/{APP_VERSION} (https://github.com/gnienie/voidex)"
-MIN_MINECRAFT = (1, 8, 9)
+MIN_MINECRAFT = (1, 0, 0)
 
 MODS = [
     {"slug": "fabric-api", "name": "Fabric API", "description": "Common library required by many Fabric mods.", "default": True},
@@ -667,9 +667,9 @@ class VoidexApp(ctk.CTk):
                         conflicts.append(" ↔ ".join(sorted((mod["name"], chosen_ids[other_id]))))
         conflicts = sorted(set(conflicts))
         if conflicts:
-            details = "\\n".join("- " + item for item in conflicts)
-            message = ("Modrinth marks these selected mods as incompatible:\\n\\n" + details
-                       + "\\n\\nInstall anyway? Some conflicts may not be detected if project metadata is incomplete.")
+            details = "\n".join("- " + item for item in conflicts)
+            message = ("Modrinth marks these selected mods as incompatible:\n\n" + details
+                       + "\n\nInstall anyway? Some conflicts may not be detected if project metadata is incomplete.")
             if not messagebox.askyesno("Potential mod conflicts", message):
                 return
         folder = self._current_folder()
